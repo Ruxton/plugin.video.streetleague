@@ -80,7 +80,7 @@ def load_videos(tag,inId):
   filterStr = '{"channel":{"'+tag+'":{"'+inId+'":1}},"query":""}'
 
   req = urllib2.Request(VIDEO_FILTER_URL+filterStr)
-  req.add_header('User-Agent', UESR_AGENT)
+  req.add_header('User-Agent', USER_AGENT)
   response = urllib2.urlopen(req)
   content=response.read()
   response.close()

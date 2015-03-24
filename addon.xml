@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<addon id="plugin.video.streetleague" version="0.3.0" name="Streetleague.com Ondemand" provider-name="Ruxton">
+<addon id="plugin.video.streetleague" version="0.3.1" name="Streetleague.com Ondemand" provider-name="Ruxton">
     <requires>
         <import addon="xbmc.python" version="2.14.0"/>
         <import addon="script.module.simplejson" version="3.3.0"/>

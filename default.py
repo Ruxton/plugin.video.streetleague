@@ -17,16 +17,24 @@
 '''
 
 import xbmc, xbmcplugin, xbmcgui, xbmcaddon
-import urllib, urllib2, cgi, json
+import urllib, urllib2, cgi
 import re
+
+if sys.version_info >=  (2, 7):
+    import json as _json
+    from collections import OrderedDict
+else:
+    import simplejson as _json
+    from collections_backport import OrderedDict
 
 try:
   import StorageServer
 except:
   import storageserverdummy as StorageServer
 
+
 # DEBUG
-dbg = True
+dbg = False
 
 def log(description):
   if dbg:
@@ -47,29 +55,54 @@ pluginHandle = int(sys.argv[1])
 pluginQuery = sys.argv[2]
 
 cache = StorageServer.StorageServer(__plugin__, 1)
-# cache.delete("%")
+
+TAGS = [
+  "location2015",
+  "location2014",
+  "location2013",
+  "full",
+  "athletes",
+  "prelim",
+  "proopenpros",
+  "finals"
+]
+
+TAG_STRINGS = [
+  "2015 by Location",
+  "2014 by Location",
+  "2013 by Location",
+  "Full Videos",
+  "Videos by Athlete",
+  "Pro Open Pros",
+  "Prelminiaries (only 2013)",
+  "Finals (only 2013)"
+]
 
 USER_AGENT = ' Mozilla/5.0 (Windows; U; Windows NT 5.1; en-GB; rv:1.9.0.3) Gecko/2008092417 Firefox/3.0.3'
 
-BASE_URL = 'http://web.mobilerider.com/clients/streetleague/api/channel/?tag=full,location2014,location2013,prelim,finals,athletes,proopenpros'
+BASE_URL = 'http://web.mobilerider.com/clients/streetleague/api/channel/?tag='+(",".join(TAGS))
 VIDEO_FILTER_URL = 'http://web.mobilerider.com/clients/streetleague/api/media/?filter='
 VIDEO_DATA_URL= 'http://web.mobilerider.com/api2/2450/media/%s.json?returnUrl=http%%3A%%2F%%2Fstreetleague.com%%2Fondemand%%2F'
 
+
 def add_tags(inChannels):
+  i = 0;
   for name,channels in inChannels.iteritems():
-    listitem = xbmcgui.ListItem(name.title())
+    name_str = TAG_STRINGS[i]
+    listitem = xbmcgui.ListItem(name_str)
     url = pluginUrl + '?mode=channels&id=' + name
     xbmcplugin.addDirectoryItem(pluginHandle, url, listitem, True, len(channels))
+    i +=1
 
 def load_remote():
-  CHANNELS = {}
+  CHANNELS = OrderedDict()
   req = urllib2.Request(BASE_URL)
   req.add_header('User-Agent', USER_AGENT)
   response = urllib2.urlopen(req)
   content=response.read()
   response.close()
 
-  jsonObj = json.loads(content)
+  jsonObj = _json.loads(content, object_pairs_hook=OrderedDict)
   objects = jsonObj['objects']
   for name,channels in objects.iteritems():
     CHANNELS[str(name)] = channels
@@ -85,21 +118,20 @@ def load_videos(tag,inId):
   content=response.read()
   response.close()
 
-  jsonObj = json.loads(content)
+  jsonObj = _json.loads(content)
   videos = jsonObj['objects']
 
   return videos
 
 def load_video_data(videoid):
   url = VIDEO_DATA_URL % (videoid)
-  log("Url is: "+url)
   req = urllib2.Request(url)
   req.add_header('User-Agent', USER_AGENT)
   response = urllib2.urlopen(req)
   content=response.read()
   response.close()
 
-  video_data = json.loads(content)
+  video_data = _json.loads(content)
 
   return video_data
 
@@ -111,7 +143,8 @@ def index():
 def channels(inId):
   tag_channels = cache.cacheFunction(load_remote)
   for channel in tag_channels[inId]:
-    listItem = xbmcgui.ListItem(channel['name'])
+    name = re.sub('(.)([A-Z][a-z]+)', r'\1 \2', channel['name'])
+    listItem = xbmcgui.ListItem(name)
     url = pluginUrl + '?mode=channel&id='+channel['id']+"&tag="+inId
     xbmcplugin.addDirectoryItem(pluginHandle,url,listItem, True)
 
@@ -122,7 +155,8 @@ def channel(tag,inId):
 
   xbmc.executebuiltin("Container.SetViewMode(500)")
   for video in videos:
-    listItem = xbmcgui.ListItem(video['title'], iconImage=video['thumbnail'], thumbnailImage=video['thumbnail'])
+    title = re.sub('(.)([A-Z][a-z]+)', r'\1 \2', video['title'])
+    listItem = xbmcgui.ListItem(title, iconImage=video['thumbnail'], thumbnailImage=video['thumbnail'])
     url = pluginUrl + '?mode=play&id='+video['id']
     xbmcplugin.addDirectoryItem(pluginHandle,url,listItem, False)
 
